@@ -1,49 +1,63 @@
 import 'package:flutter/material.dart';
 import '../models/learner.dart';
 import '../models/division.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/learners_provider.dart';
 
-class LearnerForm extends StatefulWidget {
-  final Learner? learner;
-  final Function(Learner) onSave;
+class LearnerForm extends ConsumerStatefulWidget {
+  const LearnerForm({
+    super.key,
+    this.learnerIndex
+  });
 
-  const LearnerForm({super.key, this.learner, required this.onSave});
+  final int? learnerIndex;
 
   @override
-  State<LearnerForm> createState() => _LearnerFormState();
+  ConsumerState<ConsumerStatefulWidget> createState() => _LearnerFormState();
 }
 
-class _LearnerFormState extends State<LearnerForm> {
+class _LearnerFormState extends ConsumerState<LearnerForm> {
   final _givenNameController = TextEditingController();
   final _familyNameController = TextEditingController();
-  Division? _selectedDivision;
-  Gender? _selectedGender;
+  Division _selectedDivision = Division.finance;
+  Gender _selectedGender = Gender.male;
   int _score = 50;
 
   @override
   void initState() {
     super.initState();
-    if (widget.learner != null) {
-      _givenNameController.text = widget.learner!.givenName;
-      _familyNameController.text = widget.learner!.familyName;
-      _selectedDivision = widget.learner!.division;
-      _selectedGender = widget.learner!.gender;
-      _score = widget.learner!.score;
+    if (widget.learnerIndex != null) {
+      final student = ref.read(learnersProvider).learners[widget.learnerIndex!];
+      _givenNameController.text = student.givenName;
+      _familyNameController.text = student.familyName;
+      _selectedDivision = student.division;
+      _selectedGender = student.gender;
+      _score = student.score;
     }
   }
 
-  void _saveLearner() {
-    if (_selectedDivision == null || _selectedGender == null) return;
+  void _saveLearner() async {
+    if (widget.learnerIndex == null)  {
+      await ref.read(learnersProvider.notifier).addLearner(
+            _givenNameController.text.trim(),
+            _familyNameController.text.trim(),
+            _selectedDivision,
+            _selectedGender,
+            _score,
+          );
+    } else {
+      await ref.read(learnersProvider.notifier).updateLearner(
+            widget.learnerIndex!,
+            _givenNameController.text.trim(),
+            _familyNameController.text.trim(),
+            _selectedDivision,
+            _selectedGender,
+            _score,
+          );
+    }
 
-    final updatedLearner = Learner(
-      givenName: _givenNameController.text.trim(),
-      familyName: _familyNameController.text.trim(),
-      division: _selectedDivision!,
-      score: _score,
-      gender: _selectedGender!,
-    );
-
-    widget.onSave(updatedLearner);
-    Navigator.of(context).pop();
+    if (!context.mounted) return;
+    Navigator.of(context).pop(); 
   }
 
   @override
@@ -115,7 +129,7 @@ class _LearnerFormState extends State<LearnerForm> {
                   ),
                 );
               }).toList(),
-              onChanged: (value) => setState(() => _selectedDivision = value),
+              onChanged: (value) => setState(() => _selectedDivision = value!),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<Gender>(
@@ -135,7 +149,7 @@ class _LearnerFormState extends State<LearnerForm> {
                   ),
                 );
               }).toList(),
-              onChanged: (value) => setState(() => _selectedGender = value),
+              onChanged: (value) => setState(() => _selectedGender = value!),
             ),
             const SizedBox(height: 12),
             Column(

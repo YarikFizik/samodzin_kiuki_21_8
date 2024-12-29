@@ -3,16 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/division.dart';
 import '../providers/learners_provider.dart';
 
-class DepartmentsOverview extends ConsumerWidget {
-  const DepartmentsOverview({super.key});
+class DivivsionsOverview extends ConsumerWidget {
+  const DivivsionsOverview({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final learners = ref.watch(learnersProvider);
+    final state = ref.watch(learnersProvider);
 
-    final departmentCounts = {
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final divisionCounts = {
       for (var division in Division.values)
-        division: learners.where((l) => l.division == division).length,
+        division: state.learners.where((l) => l.division == division).length,
     };
 
     return Scaffold(
@@ -80,7 +84,7 @@ class DepartmentsOverview extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${departmentCounts[department]} Students',
+                  '${divisionCounts[department]} Students',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,

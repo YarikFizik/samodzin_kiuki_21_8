@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'departments_overview.dart';
-import 'students_overview.dart';
+import 'divisions_overview.dart';
+import 'learners_overview.dart';
 
 class NavigationTabs extends StatefulWidget {
   const NavigationTabs({super.key});
@@ -13,8 +13,8 @@ class _NavigationTabsState extends State<NavigationTabs> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    const DepartmentsOverview(),
-    const StudentsOverview(),
+    const DivivsionsOverview(),
+    const LearnersOverview(),
   ];
 
   final List<String> _headers = [

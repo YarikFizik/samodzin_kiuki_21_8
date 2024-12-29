@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/learner.dart';
 import '../providers/learners_provider.dart';
 import 'learner_form.dart';
 import 'learner_card.dart';
 
-class StudentsOverview extends ConsumerWidget {
-  const StudentsOverview({super.key});
+class LearnersOverview extends ConsumerWidget {
+  const LearnersOverview({super.key});
 
-  void _openStudentForm(BuildContext context, WidgetRef ref,
-      {Learner? learner, int? index}) {
+  void _openLearnerForm(BuildContext context, WidgetRef ref,
+      {int? index}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -17,23 +16,32 @@ class StudentsOverview extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) {
-        return LearnerForm(
-          learner: learner,
-          onSave: (updatedLearner) {
-            if (index != null) {
-              ref.read(learnersProvider.notifier).updateLearner(index, updatedLearner);
-            } else {
-              ref.read(learnersProvider.notifier).addLearner(updatedLearner);
-            }
-          },
-        );
+        return LearnerForm(learnerIndex: index,);
       },
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final learners = ref.watch(learnersProvider);
+    final state = ref.watch(learnersProvider);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (state.exceptionMsg != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              state.exceptionMsg!,
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -48,7 +56,7 @@ class StudentsOverview extends ConsumerWidget {
           ),
         ),
       ),
-      body: learners.isEmpty
+      body: state.learners.isEmpty
           ? const Center(
               child: Text(
                 'No students found.\nTap the button below to add!',
@@ -58,31 +66,34 @@ class StudentsOverview extends ConsumerWidget {
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: learners.length,
+              itemCount: state.learners.length,
               itemBuilder: (context, index) {
-                final learner = learners[index];
+                final learner = state.learners[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: LearnerCard(
                     learner: learner,
                     onDelete: () {
                       ref.read(learnersProvider.notifier).removeLearner(index);
-                      final container = ProviderScope.containerOf(context);
+                      final gpt = ProviderScope.containerOf(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: const Text('Learner removed'),
                           action: SnackBarAction(
                             label: 'Undo',
                             textColor: Colors.orange,
-                            onPressed: () => container
+                            onPressed: () => gpt
                                 .read(learnersProvider.notifier)
                                 .restoreLearner(),
                           ),
                         ),
-                      );
+                      ).closed.then((value) {
+                        if (value != SnackBarClosedReason.action) {
+                          gpt.read(learnersProvider.notifier).del();
+                        }
+                      });
                     },
-                    onUpdate: () => _openStudentForm(context, ref,
-                        learner: learner, index: index),
+                    onUpdate: () => _openLearnerForm(context, ref, index: index),
                   ),
                 );
               },
@@ -92,7 +103,7 @@ class StudentsOverview extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.only(left: 42, bottom: 24),
           child: ElevatedButton.icon(
-            onPressed: () => _openStudentForm(context, ref),
+            onPressed: () => _openLearnerForm(context, ref),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.teal,
               shape: RoundedRectangleBorder(
